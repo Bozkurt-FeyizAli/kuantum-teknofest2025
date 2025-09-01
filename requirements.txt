@@ -1,4 +1,0 @@
-qiskit==2.1.2
-qiskit-aer==0.17.1
-qiskit-ibm-runtime==0.41.1
-
