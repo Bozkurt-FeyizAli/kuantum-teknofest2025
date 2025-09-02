@@ -9,3 +9,4 @@ seaborn>=0.12.0
 opencv-python>=4.8.0
 torch
 deepface
+opencv-python
