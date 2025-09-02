@@ -8,6 +8,7 @@ from sklearn.preprocessing import MinMaxScaler
 import torch
 import GeneralNeuralNetwork as GNN
 from torch.utils.data import DataLoader, TensorDataset
+import re
 
 
 # import cv2
@@ -96,4 +97,19 @@ entanglement_type="linear")
 
 # parameters=[[2,3]*8]  # 8 qubit, 2 hidden layer
 # seed = torch.tensor(parameters, dtype=torch.float32)
-model.train_model(learning_rate=0.01, EPOCHS=10, train_loader=train_loader , test_loader=test_loader)
+#get parameters from file model_parameters.txt
+#Traceback (most recent call last):
+#   File "/home/feyiz-ali/Masaüstü/3. sınıf/projeler/kuantum-teknofest2025/sandbox.py", line 101, in <module>
+#     parameters = [list(map(float, line.strip().split())) for line in f.readlines()]
+#                   ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# ValueError: could not convert string to float: 'tensor(['
+with open("model_parameters.txt", "r") as f:
+    content = f.read()
+
+# Use regex to find all numbers (including negative and scientific notation)
+numbers_str = re.findall(r"[-+]?\d*\.\d+|[-+]?\d+", content)
+numbers = [float(num) for num in numbers_str]
+parameters = [numbers]  # Wrap in another list to create a 2D structure
+
+seed = torch.tensor(parameters, dtype=torch.float32)
+model.train_model(learning_rate=0.01, EPOCHS=10, train_loader=train_loader , test_loader=test_loader, seed=seed)

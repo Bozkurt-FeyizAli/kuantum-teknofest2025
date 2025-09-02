@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.optim import Adam
@@ -15,8 +16,15 @@ from qiskit.quantum_info import SparsePauliOp
 
 
 class GeneralNeuralNetwork(nn.Module):
-    def __init__(self, Qbit_number, hiddenlayer_number, entanglement_type):
+    def __init__(self, Qbit_number, hiddenlayer_number, entanglement_type, seed=None):
         super().__init__()
+        self.seed = seed
+        #use seed to set the random parameters of the quantum circuit
+        if self.seed is not None:
+            torch.manual_seed(self.seed)
+            np.random.seed(self.seed)
+        
+        # Kuantum Devresini Oluşturma
         qc = qiskit.QuantumCircuit(Qbit_number)
         feature_params = ParameterVector('x', length=Qbit_number)
 
@@ -31,7 +39,9 @@ class GeneralNeuralNetwork(nn.Module):
 
         qc.compose(feature_map, inplace=True)
         qc.compose(ansatz, inplace=True)
-
+        #drww circuit
+        print(qc)
+        qc.draw('mpl')
 
         # 1. Adım: Önceki gibi string listesini oluşturuyoruz.
         observable_strings = ['I'*i + 'Z' + 'I'*(Qbit_number-1-i) for i in range(Qbit_number)]
@@ -56,7 +66,7 @@ class GeneralNeuralNetwork(nn.Module):
         x = self.classical_layer(x)
         return x
 
-    def train_model(self, learning_rate, EPOCHS, train_loader, test_loader):
+    def train_model(self, learning_rate, EPOCHS, train_loader, test_loader, seed=None):
         loss_fn = nn.CrossEntropyLoss()  # Sınıflandırma için kayıp fonksiyonu
         optimizer = Adam(self.parameters(),lr=learning_rate)
             
@@ -90,7 +100,8 @@ class GeneralNeuralNetwork(nn.Module):
                 
                 accuracy = 100 * correct / total
                 history['accuracy'].append(accuracy)
-                torch.save(self.state_dict(), f"model_epoch_{epoch+1}.pth")
-                with open("training_history.txt", "a") as f:
-                    f.write(f"Epoch [{epoch+1}/{EPOCHS}], Kayıp (Loss): {avg_loss:.4f}, Test Doğruluğu: {accuracy:.2f}%\n")
+            # save model parameters into a file self.parameters() results in a list of parameters in a file
+            with open("model_parameters.txt", "w") as f:
+                for param in self.parameters():
+                    f.write(f"{param}\n")
             print(f"Epoch [{epoch+1}/{EPOCHS}], Kayıp (Loss): {avg_loss:.4f}, Test Doğruluğu: {accuracy:.2f}%")
