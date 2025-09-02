@@ -105,3 +105,15 @@ class GeneralNeuralNetwork(nn.Module):
                 for param in self.parameters():
                     f.write(f"{param}\n")
             print(f"Epoch [{epoch+1}/{EPOCHS}], Kayıp (Loss): {avg_loss:.4f}, Test Doğruluğu: {accuracy:.2f}%")
+    def evaluate(self,pca_deger,label)->bool:
+        self.eval()
+        with torch.no_grad():
+            preds = self(pca_deger)
+            print(preds)
+            predicted_label = torch.argmax(preds, dim=0)
+            print(f"Predicted: {predicted_label}, Actual: {label}")
+            return predicted_label == label
+    
+    def loadModel(self, path):
+        self.load_state_dict(torch.load(path))
+        self.eval()
