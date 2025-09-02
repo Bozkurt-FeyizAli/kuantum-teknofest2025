@@ -4,6 +4,7 @@ from torch.optim import Adam
 from qiskit_machine_learning.connectors import TorchConnector
 
 import qiskit
+from qiskit.circuit import ParameterVector
 from qiskit.circuit.library import ZZFeatureMap
 from qiskit.circuit.library import RealAmplitudes
 from qiskit_machine_learning.neural_networks import EstimatorQNN
@@ -13,10 +14,22 @@ from qiskit_machine_learning.neural_networks import EstimatorQNN
 
 
 class GeneralNeuralNetwork(nn.Module):
+    qnn_layer = None
+    classical_layer = None
     def __init__(self, Qbit_number, hiddenlayer_number, entanglement_type):
+        super().__init__()
         qc = qiskit.QuantumCircuit(Qbit_number)
-        feature_map = ZZFeatureMap(feature_dimension=Qbit_number)
-        ansatz = RealAmplitudes(num_qubits=Qbit_number)
+
+        feature_params = ParameterVector('x', length=Qbit_number)
+
+        # ŞİMDİ, bu parametreleri kullanacağımız boş devreyi oluşturuyoruz.
+        feature_map = qiskit.QuantumCircuit(Qbit_number, name="FeatureMap")
+        for i in range(Qbit_number):
+        # Önceden oluşturduğumuz parametreleri sırayla Ry kapılarına atıyoruz.
+            feature_map.ry(feature_params[i], i)
+
+
+        ansatz = RealAmplitudes(num_qubits=Qbit_number, reps=hiddenlayer_number, entanglement=entanglement_type)
 
         qc.compose(feature_map, inplace=True)
         qc.compose(ansatz, inplace=True)
@@ -27,16 +40,17 @@ class GeneralNeuralNetwork(nn.Module):
             weight_params=ansatz.parameters
         )
 
-        self.qnn_layer = TorchConnector(qnn)
-
+        qnn_layer = TorchConnector(qnn)
+        classical_layer = nn.Linear(Qbit_number, 2)  # 2 sınıf için çıktı katmanı
 
     def forward(self, x):
         x = self.qnn_layer(x)
+        x = self.classical_layer(x)
         return x
 
     def train_model(self, learning_rate, EPOCHS, train_loader, test_loader):
         loss_fn = nn.CrossEntropyLoss()  # Sınıflandırma için kayıp fonksiyonu
-        optimizer = Adam(self.parameters(), lr=learning_rate)
+        optimizer = Adam(self.parameters(),lr=learning_rate)
             
         history = {'loss': [], 'accuracy': []}
 
