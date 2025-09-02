@@ -10,3 +10,4 @@ opencv-python>=4.8.0
 torch
 deepface
 opencv-python
+tf-keras
