@@ -3,23 +3,21 @@ import torch.nn as nn
 from torch.optim import Adam
 from qiskit_machine_learning.connectors import TorchConnector
 
+
 import qiskit
 from qiskit.circuit import ParameterVector
-from qiskit.circuit.library import ZZFeatureMap
 from qiskit.circuit.library import RealAmplitudes
 from qiskit_machine_learning.neural_networks import EstimatorQNN
-
+from qiskit.primitives import Estimator
+from qiskit.quantum_info import SparsePauliOp
 
 
 
 
 class GeneralNeuralNetwork(nn.Module):
-    qnn_layer = None
-    classical_layer = None
     def __init__(self, Qbit_number, hiddenlayer_number, entanglement_type):
         super().__init__()
         qc = qiskit.QuantumCircuit(Qbit_number)
-
         feature_params = ParameterVector('x', length=Qbit_number)
 
         # ŞİMDİ, bu parametreleri kullanacağımız boş devreyi oluşturuyoruz.
@@ -34,14 +32,24 @@ class GeneralNeuralNetwork(nn.Module):
         qc.compose(feature_map, inplace=True)
         qc.compose(ansatz, inplace=True)
 
+
+        # 1. Adım: Önceki gibi string listesini oluşturuyoruz.
+        observable_strings = ['I'*i + 'Z' + 'I'*(Qbit_number-1-i) for i in range(Qbit_number)]
+
+        # 2. Adım (YENİ): Şimdi bu string'leri SparsePauliOp nesnelerine dönüştürüyoruz.
+        observables = [SparsePauliOp(s) for s in observable_strings]
+
+        # Artık `observables` listemiz, Qiskit'in backward pass için beklediği doğru türde nesneler içeriyor.
         qnn = EstimatorQNN(
             circuit=qc,
             input_params=feature_map.parameters,
-            weight_params=ansatz.parameters
+            weight_params=ansatz.parameters,
+            observables=observables,  # Düzeltilmiş, doğru tipteki observable listesini kullanıyoruz
+            estimator=Estimator() 
         )
-
-        qnn_layer = TorchConnector(qnn)
-        classical_layer = nn.Linear(Qbit_number, 2)  # 2 sınıf için çıktı katmanı
+        
+        self.qnn_layer = TorchConnector(qnn)
+        self.classical_layer = nn.Linear(Qbit_number, 8)  #  sınıf için çıktı katmanı
 
     def forward(self, x):
         x = self.qnn_layer(x)
