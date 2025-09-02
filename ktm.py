@@ -5,6 +5,7 @@ import numpy as np
 # import pandas as pd
 import os
 
+from qiskit import QuantumCircuit
 from sklearn.decomposition import PCA
 # from sklearn.model_selection import train_test_split
 # from sklearn.preprocessing import MinMaxScaler
@@ -23,6 +24,10 @@ from sklearn.decomposition import PCA
 
 # only deep face ile face boundary çıkarma from folder Dataset/train
 import cv2
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+import torch
+from torch.utils.data import DataLoader, TensorDataset
 def extract_faces_from_folder(folder_path, target_size=(64, 64)):
     X = []
     y = []
@@ -51,12 +56,6 @@ def extract_faces_from_folder(folder_path, target_size=(64, 64)):
                     print(f"Error processing {file_path}: {e}")
 
     return np.array(X), np.array(y)
-
-def  MinMaxScaler(X):
-    X_min = X.min(axis=0)
-    X_max = X.max(axis=0)
-    X_scaled = (X - X_min) / (X_max - X_min)
-    return X_scaled
 
 N_SAMPLES = 1800       # Toplam veri örneği sayısı
 N_FEATURES_INITIAL = 512 # Klasik ön işleme (CNN) sonrası özellik sayısı (simülasyon)
@@ -100,4 +99,81 @@ scaler = MinMaxScaler(feature_range=(0, np.pi))
 X_scaled = scaler.fit_transform(X_pca)
 print(f"Ölçeklendirilmiş Veri Boyutu (X_scaled): {X_scaled.shape}")
 
+scaler = MinMaxScaler(feature_range=(0, np.pi))
+X_scaled = scaler.fit_transform(X_pca)
 
+# Veri setini eğitim ve test olarak ikiye ayırıyoruz.
+X_train, X_test, y_train, y_test = train_test_split(
+    X_scaled, y, test_size=0.3, random_state=42, stratify=y
+)
+
+# PyTorch ile çalışmak için verileri Tensor formatına dönüştürüyoruz.
+X_train_t = torch.tensor(X_train, dtype=torch.float32)
+y_train_t = torch.tensor(y_train, dtype=torch.long)
+X_test_t = torch.tensor(X_test, dtype=torch.float32)
+y_test_t = torch.tensor(y_test, dtype=torch.long)
+
+# DataLoader, verileri batch'ler halinde modele beslememizi sağlar.
+train_loader = DataLoader(TensorDataset(X_train_t, y_train_t), batch_size=BATCH_SIZE, shuffle=True)
+test_loader = DataLoader(TensorDataset(X_test_t, y_test_t), batch_size=BATCH_SIZE)
+
+print(f"Eğitim verisi boyutu: {X_train.shape}")
+print(f"Test verisi boyutu: {X_test.shape}")
+
+from qiskit.circuit import ParameterVector
+
+# --- Adım 3: Kuantum Veri Kodlama (Feature Map) ---
+# Açı kodlama (Angle Encoding) stratejisini uyguluyoruz.
+
+# ÖNCE, N_QUBITS uzunluğunda bir parametre vektörü oluşturuyoruz.
+# Bu bize x[0], x[1], x[2], x[3] gibi parametreler verir.
+feature_params = ParameterVector('x', length=N_QUBITS)
+
+
+
+# ŞİMDİ, bu parametreleri kullanacağımız boş devreyi oluşturuyoruz.
+feature_map = QuantumCircuit(N_QUBITS, name="FeatureMap")
+for i in range(N_QUBITS):
+    # Önceden oluşturduğumuz parametreleri sırayla Ry kapılarına atıyoruz.
+    feature_map.ry(feature_params[i], i)
+
+# feature_map.draw('mpl', style='iqx') # Bu satır hala çalışır.
+from qiskit.circuit.library import RealAmplitudes, ZZFeatureMap
+from qiskit_machine_learning.circuit.library import QNNCircuit
+
+from qiskit_machine_learning.neural_networks import EstimatorQNN
+# --- Adım 4: Parametreli Kuantum Devresi (Ansatz) ---
+# Bu devre, öğrenme işlemini gerçekleştirecek olan eğitilebilir katmandır.
+# RealAmplitudes, dönme ve CNOT kapılarından oluşan standart ve etkili bir PQC'dir.
+# 'reps=2' ile devreyi sığ tutarak NISQ cihazları için uygun hale getiriyoruz.
+ansatz = RealAmplitudes(N_QUBITS, reps=2, entanglement='linear')
+ansatz.draw('mpl', style='iqx')
+
+
+# Kuantum Devresini Oluşturma
+qc = QuantumCircuit(N_QUBITS)
+qc.compose(feature_map, inplace=True)
+qc.compose(ansatz, inplace=True)
+print("\nTam Kuantum Devresi (Feature Map + Ansatz):")
+qc.draw('mpl', style='iqx')
+
+
+# --- QNN'i Qiskit'te Tanımlama ---
+from qiskit.primitives import StatevectorEstimator
+# DEĞİŞİKLİK: String'leri Qiskit nesnelerine çevirmek için bu sınıfı import ediyoruz.
+from qiskit.quantum_info import SparsePauliOp
+
+# 1. Adım: Önceki gibi string listesini oluşturuyoruz.
+observable_strings = ['I'*i + 'Z' + 'I'*(N_QUBITS-1-i) for i in range(N_QUBITS)]
+
+# 2. Adım (YENİ): Şimdi bu string'leri SparsePauliOp nesnelerine dönüştürüyoruz.
+observables = [SparsePauliOp(s) for s in observable_strings]
+
+# Artık `observables` listemiz, Qiskit'in backward pass için beklediği doğru türde nesneler içeriyor.
+qnn = EstimatorQNN(
+    circuit=qc,
+    input_params=feature_map.parameters,
+    weight_params=ansatz.parameters,
+    observables=observables,  # Düzeltilmiş, doğru tipteki observable listesini kullanıyoruz
+    estimator=StatevectorEstimator() 
+)
