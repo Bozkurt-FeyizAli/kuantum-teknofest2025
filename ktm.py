@@ -31,7 +31,7 @@ from torch.utils.data import DataLoader, TensorDataset
 def extract_faces_from_folder(folder_path, target_size=(64, 64)):
     X = []
     y = []
-    label_map = {}  # Map to convert folder names to numeric labels
+    label_map = {} 
     current_label = 0
 
     for subdir in os.listdir(folder_path):
@@ -45,30 +45,30 @@ def extract_faces_from_folder(folder_path, target_size=(64, 64)):
             for filename in os.listdir(subdir_path):
                 file_path = os.path.join(subdir_path, filename)
                 try:
-                    # Use DeepFace to detect and extract the face
+                    # Usage of DeepFace to detect and extract the face
                     face_img = DeepFace.represent(file_path,  enforce_detection=True, model_name="Facenet512", detector_backend='mtcnn')
                     for face in face_img:
                         print(face.get("facial_area"))
                         if face_img is not None:
-                            X.append(face.get("embedding"))  # Flatten the image to a 1D array
+                            X.append(face.get("embedding"))  
                             y.append(label)
                 except Exception as e:
                     print(f"Error processing {file_path}: {e}")
 
     return np.array(X), np.array(y)
 
-N_SAMPLES = 1800       # Toplam veri örneği sayısı
-N_FEATURES_INITIAL = 512 # Klasik ön işleme (CNN) sonrası özellik sayısı (simülasyon)
-N_CLASSES = 8          # Sınıf (oda) sayısı
-N_QUBITS = 4           # Kuantum devresinde kullanılacak kübit sayısı
+N_SAMPLES = 1800      
+N_FEATURES_INITIAL = 512 
+N_CLASSES = 8        
+N_QUBITS = 4          
 
-SHOTS = 1024           # Ölçüm tekrar sayısı (gürültüyü azaltmak için)
-EPOCHS = 30            # Eğitim döngüsü sayısı
-LEARNING_RATE = 0.01   # Öğrenme oranı
-BATCH_SIZE = 16        # Eğitimde aynı anda işlenecek veri sayısı
+SHOTS = 1024          
+EPOCHS = 30           
+LEARNING_RATE = 0.01  
+BATCH_SIZE = 16       
 #sahte veri oluşturmak yerine face boundary çıkarma ve
 # DeepFace kullanarak yüzleri çıkar
-# Load the dataset and extract faces
+
 folder_path = 'Dataset/train'
 X, y = extract_faces_from_folder(folder_path)
 
