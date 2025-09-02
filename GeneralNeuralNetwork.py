@@ -1,21 +1,20 @@
 import torch
-from torch import nn
+import torch.nn as nn
+from torch.optim import Adam
+from qiskit_machine_learning.connectors import TorchConnector
+
 import qiskit
-import qiskit_machine_learning
-import qiskit_algorithms
-import qiskit_optimizers
-import qiskit_terra
-import qiskit_aer
-import qiskit_ignis
-import qiskit_machine_learning
-import qiskit_machine_learning_algorithms
-import qiskit_machine_learning_algorithms_
+from qiskit.circuit.library import ZZFeatureMap
+from qiskit.circuit.library import RealAmplitudes
+from qiskit_machine_learning.neural_networks import EstimatorQNN
+
+
 
 
 
 class GeneralNeuralNetwork(nn.Module):
     def __init__(self, Qbit_number, hiddenlayer_number, entanglement_type):
-        qc = QuantumCircuit(Qbit_number)
+        qc = qiskit.QuantumCircuit(Qbit_number)
         feature_map = ZZFeatureMap(feature_dimension=Qbit_number)
         ansatz = RealAmplitudes(num_qubits=Qbit_number)
 
