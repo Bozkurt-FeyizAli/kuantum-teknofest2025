@@ -52,8 +52,11 @@ def extract_faces_from_folder(folder_path, target_size=(64, 64)):
 
     return np.array(X), np.array(y)
 
-def  MinMaxScaler():
-    pass
+def  MinMaxScaler(X):
+    X_min = X.min(axis=0)
+    X_max = X.max(axis=0)
+    X_scaled = (X - X_min) / (X_max - X_min)
+    return X_scaled
 
 N_SAMPLES = 1800       # Toplam veri örneği sayısı
 N_FEATURES_INITIAL = 512 # Klasik ön işleme (CNN) sonrası özellik sayısı (simülasyon)
@@ -70,6 +73,14 @@ BATCH_SIZE = 16        # Eğitimde aynı anda işlenecek veri sayısı
 folder_path = 'Dataset/train'
 X, y = extract_faces_from_folder(folder_path)
 
+#write data into a file for future use
+np.save('X_faces.npy', X)
+np.save('y_labels.npy', y)
+
+# use saved data
+X = np.load('X_faces.npy')
+y = np.load('y_labels.npy')
+
 
 print(f"Başlangıç Veri Boyutu (X): {X.shape}")
 print(f"Etiket Boyutu (y): {y.shape}")
@@ -80,10 +91,13 @@ if X.shape[0] > 0:
 else:
     print("No faces were extracted. Check the folder path and image content.")
 
-# --- Adım 2: Özellik Ölçekleme ---
+# --- Adım 2: Özellik Ölçekleme --- with PCA for 6 feature
 # Özellikleri [0, 1] aralığına ölçekliyoruz.
-X = X.reshape(X.shape[0], -1)  # Flatten images if necessary
-scaler = MinMaxScaler()
-X_scaled = scaler.fit_transform(X)
-print(f"Ölçeklenmiş Veri Boyutu (X_scaled): {X_scaled.shape}")
+pca = PCA(n_components=N_QUBITS)
+X_pca = pca.fit_transform(X)
+print(f"PCA sonrası Veri Boyutu (X_pca): {X_pca.shape}")
+scaler = MinMaxScaler(feature_range=(0, np.pi))
+X_scaled = scaler.fit_transform(X_pca)
+print(f"Ölçeklendirilmiş Veri Boyutu (X_scaled): {X_scaled.shape}")
+
 
