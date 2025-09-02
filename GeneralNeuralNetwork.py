@@ -90,5 +90,7 @@ class GeneralNeuralNetwork(nn.Module):
                 
                 accuracy = 100 * correct / total
                 history['accuracy'].append(accuracy)
-
+                torch.save(self.state_dict(), f"model_epoch_{epoch+1}.pth")
+                with open("training_history.txt", "a") as f:
+                    f.write(f"Epoch [{epoch+1}/{EPOCHS}], Kayıp (Loss): {avg_loss:.4f}, Test Doğruluğu: {accuracy:.2f}%\n")
             print(f"Epoch [{epoch+1}/{EPOCHS}], Kayıp (Loss): {avg_loss:.4f}, Test Doğruluğu: {accuracy:.2f}%")
