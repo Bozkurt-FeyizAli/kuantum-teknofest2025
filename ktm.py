@@ -41,7 +41,7 @@ def extract_faces_from_folder(folder_path, target_size=(64, 64)):
                 file_path = os.path.join(subdir_path, filename)
                 try:
                     # Use DeepFace to detect and extract the face
-                    face_img = DeepFace.extract_faces(file_path, enforce_detection=False)
+                    face_img = DeepFace.represent(file_path,  enforce_detection=True, model_name="Facenet512", detector_backend='mtcnn')
                     for face in face_img:
                         print(face.get("facial_area"))
                         if face_img is not None:
@@ -85,5 +85,5 @@ else:
 X = X.reshape(X.shape[0], -1)  # Flatten images if necessary
 scaler = MinMaxScaler()
 X_scaled = scaler.fit_transform(X)
-print
+print(f"Ölçeklenmiş Veri Boyutu (X_scaled): {X_scaled.shape}")
 
