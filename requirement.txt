@@ -8,3 +8,4 @@ matplotlib>=3.0.0
 seaborn>=0.12.0
 opencv-python>=4.8.0
 torch
+deepface
