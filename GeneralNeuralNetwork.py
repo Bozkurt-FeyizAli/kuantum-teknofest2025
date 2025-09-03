@@ -144,17 +144,6 @@ class GeneralNeuralNetwork(nn.Module):
                 f.write(f"Epoch: {epoch+1}, Loss: {avg_loss}, Accuracy: {accuracy}\n")
 
             print(f"Epoch [{epoch+1}/{EPOCHS}], Kayıp (Loss): {avg_loss:.4f}, Test Doğruluğu: {accuracy:.2f}%")
-
-        # Eğitim bittiğinde session'ı kapatın
-        self.close()
-
-    def close(self):
-        if self.session is not None:
-            try:
-                self.session.close()
-            except Exception:
-                pass
-            self.session = None
     def evaluate(self,pca_deger,label)->bool:
         self.eval()
         with torch.no_grad():
@@ -207,3 +196,4 @@ class GeneralNeuralNetwork(nn.Module):
                     f.write(f"{ROC[i][j][0]}, {ROC[i][j][1]}\n")
                 f.write("\n")
         #loging into file PCM data
+        self.eval()
