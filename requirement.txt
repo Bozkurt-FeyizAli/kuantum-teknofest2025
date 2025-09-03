@@ -11,3 +11,4 @@ torch
 deepface
 opencv-python
 tf-keras
+qiskit_ibm_provider

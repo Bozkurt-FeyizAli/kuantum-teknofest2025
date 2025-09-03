@@ -13,7 +13,7 @@ import re
 
 # import cv2
 # import matplotlib.pyplot as plt
-nqubits = 8
+nqubits = 9
 def extract_faces_from_folder(folder_path, target_size=(64, 64)):
     X = []
 
