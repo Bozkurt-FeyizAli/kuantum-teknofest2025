@@ -13,7 +13,7 @@ import re
 
 # import cv2
 # import matplotlib.pyplot as plt
-
+nqubits = 8
 def extract_faces_from_folder(folder_path, target_size=(64, 64)):
     X = []
 
@@ -69,7 +69,7 @@ y_test = np.load('y_labels_test.npy')
 
 
 # --- Özellik Ölçekleme ---
-pca = PCA(n_components=6)
+pca = PCA(n_components=nqubits)
 X_train_pca = pca.fit_transform(X_train_orig)
 X_test_pca = pca.transform(X_test_orig)
 print(f"PCA sonrası Veri Boyutu (X_train_pca): {X_train_pca.shape}")
@@ -90,8 +90,11 @@ y_test = torch.tensor(y_test, dtype=torch.long)
 train_loader = DataLoader(TensorDataset(X_train, y_train), batch_size=16, shuffle=True)
 test_loader = DataLoader(TensorDataset(X_test, y_test), batch_size=16)
 
+# veri işleme kısımlarını adım adım anlat
 
-model = GNN.GeneralNeuralNetwork(Qbit_number=6,
+
+
+model = GNN.GeneralNeuralNetwork(Qbit_number=nqubits,
 hiddenlayer_number=2,
 entanglement_type="linear")
 

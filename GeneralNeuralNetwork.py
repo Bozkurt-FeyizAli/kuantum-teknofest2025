@@ -100,8 +100,14 @@ class GeneralNeuralNetwork(nn.Module):
                 
                 accuracy = 100 * correct / total
                 history['accuracy'].append(accuracy)
-            # save model parameters into a file self.parameters() results in a list of parameters in a file
+            # save model parameters into a file self.parameters() results in a list of parameters in a file also log the epoch, avg_loss and accuracy   into file and use future usage
+            # log ayrı dosada olsun parametreler sonra kullanılacak
             with open("model_parameters.txt", "w") as f:
                 for param in self.parameters():
-                    f.write(f"{param}\n")
+                    f.write(f"{param.data}\n")
+            #log epoch, avg_loss and accuracy into a file with parameter
+            with open("training_log.txt", "a") as f:
+                for param in self.parameters():
+                    f.write(f"{param.data}\n")
+                f.write(f"Epoch: {epoch+1}, Loss: {avg_loss}, Accuracy: {accuracy}\n")
             print(f"Epoch [{epoch+1}/{EPOCHS}], Kayıp (Loss): {avg_loss:.4f}, Test Doğruluğu: {accuracy:.2f}%")

@@ -148,3 +148,100 @@ qnn = EstimatorQNN(
 )
 print(f"\nQNN Giriş Parametreleri: {qnn.input_params}")
 print(f"QNN Ağırlık Parametreleri: {qnn.weight_params}")
+
+from qiskit_machine_learning.connectors import TorchConnector
+from sklearn.metrics import accuracy_score
+from torch.optim import Adam
+import matplotlib.pyplot as plt
+import torch.nn as nn
+
+
+class HybridModel(nn.Module):
+    def __init__(self, qnn):
+        super().__init__()
+        # Qiskit QNN'ini bir PyTorch katmanına dönüştürüyoruz.
+        self.qnn_layer = TorchConnector(qnn)
+        
+        # Kuantum katmanın çıktısını (N_QUBITS boyutlu) alıp,
+        # N_CLASSES boyutlu bir çıktıya dönüştüren klasik katman.
+        self.classical_layer = nn.Linear(N_QUBITS, N_CLASSES)
+
+    def forward(self, x):
+        # Veri akışı: Girdi -> Kuantum Katman -> Klasik Katman -> Çıktı
+        x = self.qnn_layer(x)
+        x = self.classical_layer(x)
+        return x
+
+# Modeli oluşturma
+model = HybridModel(qnn)
+print("\nHibrit Model Mimarisi:")
+print(model)
+
+
+# --- Adım 6: Eğitim Döngüsü ---
+loss_fn = nn.CrossEntropyLoss()  # Sınıflandırma için kayıp fonksiyonu
+optimizer = Adam(model.parameters(), lr=LEARNING_RATE)
+
+history = {'loss': [], 'accuracy': []}
+
+print("\nEğitim Başlatılıyor...")
+for epoch in range(EPOCHS):
+    model.train()
+    total_loss = 0
+    for batch_x, batch_y in train_loader:
+        optimizer.zero_grad()          # Gradyanları sıfırla
+        preds = model(batch_x)         # Tahmin yap
+        loss = loss_fn(preds, batch_y) # Kaybı hesapla
+        loss.backward()                # Geri yayılım (Parameter-Shift Rule Qiskit tarafından yönetilir)
+        optimizer.step()               # Parametreleri güncelle
+        total_loss += loss.item()
+    
+    avg_loss = total_loss / len(train_loader)
+    history['loss'].append(avg_loss)
+    
+    # Her epoch sonunda test doğruluğunu kontrol et
+    model.eval()
+    with torch.no_grad():
+        correct = 0
+        total = 0
+        for batch_x, batch_y in test_loader:
+            preds = model(batch_x)
+            predicted_labels = torch.argmax(preds, dim=1)
+            total += batch_y.size(0)
+            correct += (predicted_labels == batch_y).sum().item()
+        
+        accuracy = 100 * correct / total
+        history['accuracy'].append(accuracy)
+
+    print(f"Epoch [{epoch+1}/{EPOCHS}], Kayıp (Loss): {avg_loss:.4f}, Test Doğruluğu: {accuracy:.2f}%")
+
+
+# ==============================================================================
+# 4. SONUÇLARIN DEĞERLENDİRİLMESİ
+# ==============================================================================
+print("\nEğitim Tamamlandı!")
+
+# Eğitim sürecini görselleştirme
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+ax1.plot(history['loss'])
+ax1.set_title("Eğitim Kaybı (Loss)")
+ax1.set_xlabel("Epoch")
+ax1.set_ylabel("Cross-Entropy Loss")
+
+ax2.plot(history['accuracy'])
+ax2.set_title("Test Verisi Doğruluğu (Accuracy)")
+ax2.set_xlabel("Epoch")
+ax2.set_ylabel("Accuracy (%)")
+plt.tight_layout()
+plt.show()
+
+# Final test performansı
+model.eval()
+with torch.no_grad():
+    y_pred_list = []
+    for batch_x, _ in test_loader:
+        preds = model(batch_x)
+        y_pred_list.extend(torch.argmax(preds, dim=1).numpy())
+
+final_accuracy = accuracy_score(y_test, y_pred_list)
+print(f"\nModelin Nihai Test Doğruluğu: {final_accuracy*100:.2f}%")
